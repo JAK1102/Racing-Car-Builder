@@ -1,27 +1,46 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Racing Car Builder — Prototype 01</title>
-<style>
-body{margin:0;background:#101820;color:white;font-family:system-ui;text-align:center}h1{font-size:22px;margin:18px 0 4px}p{color:#c5d1db;margin:6px 12px}canvas{width:min(96vw,700px);height:370px;touch-action:none;background:linear-gradient(#263847,#111a24);border-radius:14px;margin-top:12px}button{font-size:17px;border:0;border-radius:10px;padding:12px 17px;margin:7px;background:#d8a84b;color:#171717;font-weight:bold}.parts{max-width:700px;margin:auto}.status{min-height:28px;color:#f5d78d}
-</style></head><body><h1>Racing Car Builder</h1><p>Prototype 01 — touch to rotate the chassis, then fit four wheels.</p><canvas id="scene" width="800" height="440"></canvas><div class="status" id="status">Select a wheel below to fit it.</div><div class="parts" id="parts"></div><button id="reset">Reset build</button>
-<script>
-const c=document.getElementById('scene'),ctx=c.getContext('2d'),status=document.getElementById('status'),parts=document.getElementById('parts');
-let angle=-.45,installed=[false,false,false,false],drag=false,lastX=0;
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Racing Car Builder — 3D Prototype 02</title><style>
+*{box-sizing:border-box}body{margin:0;background:#101820;color:#f4f7fa;font:16px system-ui,sans-serif}header{padding:15px 18px 8px;text-align:center}h1{font-size:22px;margin:0 0 4px}p{margin:4px;color:#bfcbd3;font-size:14px}#scene{height:min(57vh,510px);min-height:300px;position:relative;touch-action:none;background:linear-gradient(#243445,#111923)}#scene canvas{display:block;width:100%;height:100%;touch-action:none}#hint{position:absolute;left:12px;top:12px;background:#0a1019b8;padding:8px 10px;border-radius:8px;font-size:12px;pointer-events:none}#status{text-align:center;color:#f1cc76;min-height:28px;margin:9px 8px}.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-width:560px;margin:8px auto;padding:0 12px}button{border:1px solid #c79a4b;background:#d7ac60;color:#171c21;padding:12px 7px;border-radius:10px;font-weight:700;font-size:14px;min-height:48px}button:disabled{opacity:.45}.bottom{text-align:center;padding-bottom:20px}.bottom button{background:#293a49;color:white;border-color:#71899b;padding:10px 22px}#error{color:#ffb8a8;text-align:center;padding:20px;display:none}</style></head><body><header><h1>Racing Car Builder</h1><p>3D prototype 02 — experimental chassis assembly</p></header><div id="scene"><div id="hint">Drag to orbit · Pinch to zoom</div></div><div id="error"></div><div id="status">Choose a wheel to attach it to the car.</div><div class="controls" id="controls"></div><div class="bottom"><button id="reset">Reset build</button></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
+const host=document.getElementById('scene'),status=document.getElementById('status'),controls=document.getElementById('controls');
+try {
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x1c2935);
+const camera=new THREE.PerspectiveCamera(45,1,.1,100);const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'default'});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xcfe7ff,0x26303a,2.3));
+const sun=new THREE.DirectionalLight(0xffffff,3);sun.position.set(-4,9,7);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-12;sun.shadow.camera.right=12;sun.shadow.camera.top=12;sun.shadow.camera.bottom=-12;scene.add(sun);
+const mat=(color,metalness=.15,roughness=.5)=>new THREE.MeshStandardMaterial({color,metalness,roughness});
+const red=mat(0xc92c2c,.48,.28),carbon=mat(0x20252b,.25,.7),dark=mat(0x111419,.12,.88),silver=mat(0xb7c0c9,.8,.25),gold=mat(0xe1b66c,.55,.4),floorMat=mat(0x35404b);
+function box(parent,w,h,d,m,x,y,z){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+function cylinder(parent,r1,r2,h,m,x,y,z,rotZ=0){let o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,24),m);o.position.set(x,y,z);o.rotation.z=rotZ;o.castShadow=true;parent.add(o);return o}
+const ground=box(scene,25,.12,25,floorMat,0,-.12,0);ground.receiveShadow=true;
+const grid=new THREE.GridHelper(25,25,0x637381,0x46535f);grid.position.y=-.045;scene.add(grid);
+for(let x of [-6,6]){box(scene,.28,4,.28,silver,x,2,-6);box(scene,.28,4,.28,silver,x,2,6)}
+box(scene,12,.22,.24,silver,0,4,-6);box(scene,12,.22,.24,silver,0,4,6);
+const car=new THREE.Group();scene.add(car);
+box(car,.85,.35,3.8,red,0,.72,0);
+box(car,1.15,.15,2.15,carbon,0,.55,.3);
+box(car,.4,.2,1.7,red,0,.72,-2.25);
+box(car,1.9,.09,.4,carbon,0,.46,-2.95);
+box(car,1.55,.1,.36,carbon,0,1.1,2.3);
+for(let x of [-.78,.78]){box(car,.65,.2,1.3,red,x,.68,.35);box(car,.06,.18,1.5,silver,x*.78,.65,-1.2)}
+box(car,.75,.35,.7,carbon,0,.95,.55);
+const cockpit=new THREE.Mesh(new THREE.TorusGeometry(.38,.09,10,24,Math.PI),carbon);cockpit.rotation.x=Math.PI/2;cockpit.position.set(0,1.06,.42);car.add(cockpit);
+box(car,.13,.68,.15,carbon,0,1.28,.12);
+box(car,.15,.22,1.2,red,0,1.04,1.45);
+for(let x of [-1.1,1.1]){box(car,.12,.12,.75,silver,x,.63,-1.75);box(car,.12,.12,.8,silver,x,.63,1.55)}
+const wheels=[];const positions=[[-1.24,.64,-1.8],[1.24,.64,-1.8],[-1.32,.64,1.55],[1.32,.64,1.55]];
+function makeWheel(x,y,z){const g=new THREE.Group();g.position.set(x,y,z);const tyre=new THREE.Mesh(new THREE.CylinderGeometry(.49,.49,.31,36),dark);tyre.rotation.z=Math.PI/2;tyre.castShadow=true;g.add(tyre);for(let side of [-1,1]){const rim=new THREE.Mesh(new THREE.CylinderGeometry(.27,.27,.012,24),silver);rim.rotation.z=Math.PI/2;rim.position.x=side*.16;g.add(rim);const hub=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.015,16),gold);hub.rotation.z=Math.PI/2;hub.position.x=side*.17;g.add(hub)}scene.add(g);return g}
+positions.forEach((p,i)=>{let g=makeWheel(p[0]*1.95,.49,p[2]+(i<2?-1.3:1.3));wheels.push(g)});
+let fitted=[false,false,false,false],az=.55,el=.37,dist=9,down=false,lastX=0,lastY=0,pinch=0;
 const names=['Front left','Front right','Rear left','Rear right'];
-function project(x,y,z){let a=angle,xx=x*Math.cos(a)-z*Math.sin(a),zz=x*Math.sin(a)+z*Math.cos(a);return [400+xx*100,230+zz*44-y*85]}
-function poly(points,fill,stroke='#8fa4b4'){ctx.beginPath();points.forEach((p,i)=>{let q=project(...p);i?ctx.lineTo(...q):ctx.moveTo(...q)});ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}
-function circle(x,y,z,r,color){let p=project(x,y,z);ctx.beginPath();ctx.ellipse(p[0],p[1],r*80,r*48,0,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#b8c2c8';ctx.stroke()}
-function draw(){ctx.clearRect(0,0,800,440);ctx.fillStyle='#304252';ctx.fillRect(0,330,800,110);ctx.strokeStyle='#415362';for(let i=0;i<800;i+=70){ctx.beginPath();ctx.moveTo(i,330);ctx.lineTo(i-65,440);ctx.stroke()}
-poly([[-.42,0,-1.35],[.42,0,-1.35],[.56,0,1.3],[-.56,0,1.3]],'#b9c2c9');
-poly([[-.2,-.13,-1.9],[.2,-.13,-1.9],[.35,-.13,-1.15],[-.35,-.13,-1.15]],'#c94c34');
-poly([[-.72,-.03,-1.18],[.72,-.03,-1.18],[.72,-.03,-.98],[-.72,-.03,-.98]],'#d9e0e5');
-poly([[-.82,-.03,1.05],[.82,-.03,1.05],[.82,-.03,1.28],[-.82,-.03,1.28]],'#d9e0e5');
-circle(0,-.1,.35,.38,'#1a2630');
-const spots=[[-.85,0,-1.05],[.85,0,-1.05],[-.95,0,1.17],[.95,0,1.17]];
-spots.forEach((p,i)=>{if(installed[i])circle(...p,.34,'#15191c');else circle(...p,.12,'#e4ad4e')});
-ctx.fillStyle='#fff';ctx.font='18px system-ui';ctx.fillText('Touch and drag to rotate',22,34);
-ctx.fillText(installed.filter(Boolean).length+'/4 wheels fitted',22,64)}
-function update(){parts.innerHTML='';names.forEach((n,i)=>{let b=document.createElement('button');b.textContent=(installed[i]?'✓ ':'Fit ')+n;b.disabled=installed[i];b.style.opacity=installed[i]?.45:1;b.onclick=()=>{installed[i]=true;status.textContent=n+' wheel fitted.';if(installed.every(Boolean))status.textContent='All four wheels fitted! Prototype test complete.';update();draw()};parts.appendChild(b)});}
-c.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(drag){angle+=(e.clientX-lastX)*.008;lastX=e.clientX;draw()}});c.addEventListener('pointerup',()=>drag=false);
-document.getElementById('reset').onclick=()=>{installed=[false,false,false,false];angle=-.45;status.textContent='Select a wheel below to fit it.';update();draw()};update();draw();
+function update(){controls.replaceChildren();names.forEach((name,i)=>{const b=document.createElement('button');b.textContent=(fitted[i]?'✓ Fitted: ':'Fit: ')+name;b.disabled=fitted[i];b.onclick=()=>{fitted[i]=true;wheels[i].position.set(...positions[i]);status.textContent=fitted.every(Boolean)?'All four wheels fitted — assembly test complete!':name+' wheel fitted.';update()};controls.appendChild(b)})}
+document.getElementById('reset').onclick=()=>{fitted.fill(false);positions.forEach((p,i)=>wheels[i].position.set(p[0]*1.95,.49,p[2]+(i<2?-1.3:1.3)));status.textContent='Choose a wheel to attach it to the car.';update()};update();
+const canvas=renderer.domElement;
+canvas.addEventListener('pointerdown',e=>{down=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(!down)return;az+=(e.clientX-lastX)*.009;el=Math.max(.12,Math.min(1.25,el+(e.clientY-lastY)*.006));lastX=e.clientX;lastY=e.clientY});
+canvas.addEventListener('pointerup',()=>down=false);canvas.addEventListener('pointercancel',()=>down=false);
+canvas.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(5,Math.min(15,dist+e.deltaY*.01))},{passive:false});
+canvas.addEventListener('touchmove',e=>{if(e.touches.length===2){let d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(pinch)dist=Math.max(5,Math.min(15,dist+(pinch-d)*.015));pinch=d}},{passive:true});canvas.addEventListener('touchend',()=>pinch=0);
+function render(){const w=host.clientWidth,h=host.clientHeight;if(renderer.domElement.width!==Math.floor(w*renderer.getPixelRatio())||renderer.domElement.height!==Math.floor(h*renderer.getPixelRatio())){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}camera.position.set(Math.sin(az)*dist,Math.sin(el)*dist+1.1,Math.cos(az)*dist);camera.lookAt(0,.6,0);renderer.render(scene,camera);requestAnimationFrame(render)}render();
+}catch(err){document.getElementById('error').style.display='block';document.getElementById('error').textContent='3D could not load. Check internet connection and reload. '+err.message}
 </script></body></html>
